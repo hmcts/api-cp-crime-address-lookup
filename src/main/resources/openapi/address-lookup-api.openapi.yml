@@ -1,0 +1,307 @@
+openapi: 3.0.3
+info:
+  title: Address Lookup API
+  description: |
+    Looks up and validates UK addresses via OS Places, returning the canonical
+    HMCTS Common Platform address contract (`address1`-`address5`, `postcode`, `uprn`).
+
+    This repository contains **only** the OpenAPI contract for this API: the specification file,
+    generated request/response interfaces and models, and contract-verification tests. It does
+    **not** contain a runnable service — no controllers, no service layer, no OS Places HTTP
+    client, no business logic. The runtime Spring Boot service that implements this contract
+    (validating requests, calling OS Places, mapping DPA records to the canonical shape, caching,
+    and handling degraded/error conditions) is built and deployed from a separate service
+    repository that depends on the models/interfaces generated from this spec.
+
+    Callers reach the runtime service through the platform gateway, which handles authentication;
+    this API itself defines no authentication scheme.
+  version: 0.0.0
+  contact:
+    email: no-reply@hmcts.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - description: Address Lookup API
+    url: https://api-cp-crime-address-lookup.net/{version}
+    variables:
+      version:
+        default: "0.0.0"
+        description: API version; matches the spec info.version
+
+tags:
+  - name: Address Search
+    description: Search UK addresses by postcode and/or free-text first line, returning candidate addresses in the canonical CP contract.
+  - name: Address Match
+    description: Match a single free-text address string against OS Places to validate/resolve it to the best-scoring candidate(s).
+
+paths:
+  # ---------------------------
+  # Address Search
+  # ---------------------------
+  /addresses:
+    get:
+      tags: [Address Search]
+      summary: Search addresses by postcode and/or free-text first line
+      description: |
+        Searches OS Places for candidate addresses. At least one of `postcode` or `firstLine`
+        must be supplied; a request with neither is rejected with `400` and no upstream call is
+        made. Supplying both combines them into a single free-text search (`firstLine` and
+        `postcode` concatenated) — this improves relevance but is **not** a strict postcode
+        filter: OS Places' free-text matching can still return a candidate whose postcode differs
+        from the one supplied if its other terms score highly enough. A search with no matches
+        returns `200` with an empty `results` array — this is not an error.
+
+        `include=dpa` nests the raw OS Places DPA record on each candidate (key material is
+        always stripped regardless of this flag).
+      operationId: searchAddresses
+      parameters:
+        - name: postcode
+          in: query
+          required: false
+          description: Full or partial UK postcode. At least one of `postcode`/`firstLine` is required.
+          schema:
+            type: string
+            maxLength: 10
+          example: "SW1A 1AA"
+        - name: firstLine
+          in: query
+          required: false
+          description: Free-text first line of the address (e.g. building name/number and street). At least one of `postcode`/`firstLine` is required.
+          schema:
+            type: string
+            maxLength: 100
+          example: "10 Downing Street"
+        - name: include
+          in: query
+          required: false
+          description: Additional data to include per candidate. `dpa` nests the raw OS Places DPA record.
+          schema:
+            $ref: '#/components/schemas/AddressResponseInclude'
+      responses:
+        '200':
+          description: Search completed (possibly with zero results)
+          content:
+            application/vnd.addresslookup-service.addresses+json:
+              schema:
+                $ref: '#/components/schemas/AddressSearchResponse'
+              examples:
+                postcodeMatch:
+                  summary: Postcode search with candidates
+                  value:
+                    results:
+                      - address1: "10"
+                        address2: "Downing Street"
+                        postcode: "SW1A 1AA"
+                        uprn: "10033544886"
+                noMatches:
+                  summary: Zero results (not an error)
+                  value:
+                    results: []
+        '400':
+          description: Neither `postcode` nor `firstLine` supplied, or a field exceeds its maximum length
+          content:
+            application/vnd.addresslookup-service.addresses+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: OS Places is unavailable, degraded, or the circuit breaker is open
+          content:
+            application/vnd.addresslookup-service.addresses+json:
+              schema:
+                $ref: '#/components/schemas/DegradedResponse'
+              examples:
+                upstreamTimeout:
+                  summary: OS Places did not respond in time
+                  value: { degraded: true, reason: upstream-timeout }
+                circuitOpen:
+                  summary: Circuit breaker already open, no upstream call attempted
+                  value: { degraded: true, reason: circuit-open }
+
+  # ---------------------------
+  # Address Match
+  # ---------------------------
+  /addresses/find:
+    get:
+      tags: [Address Match]
+      summary: Match a free-text address string to the best-scoring OS Places candidate(s)
+      description: |
+        Resolves/validates a single free-text address string against OS Places, applying a
+        minimum match-score floor. Candidates carry a `match` score (0-1). A search with no
+        candidates scoring at or above `minMatch` returns `200` with an empty `results` array —
+        this is not an error.
+      operationId: findAddress
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: Free-text address string to match.
+          schema:
+            type: string
+            maxLength: 200
+          example: "10 Downing Street, London SW1A 1AA"
+        - name: minMatch
+          in: query
+          required: false
+          description: >-
+            Minimum OS Places match score a candidate must reach to be returned. Must be
+            0.1-1.0 (inclusive) — this mirrors OS Places' own `minmatch` constraint, which does
+            not accept 0.
+          schema:
+            type: number
+            minimum: 0.1
+            maximum: 1
+          example: 0.7
+      responses:
+        '200':
+          description: Match completed (possibly with zero results)
+          content:
+            application/vnd.addresslookup-service.addresses-find+json:
+              schema:
+                $ref: '#/components/schemas/AddressSearchResponse'
+              examples:
+                highConfidenceMatch:
+                  summary: Single high-confidence match
+                  value:
+                    results:
+                      - address1: "10"
+                        address2: "Downing Street"
+                        postcode: "SW1A 1AA"
+                        uprn: "10033544886"
+                        match: 0.95
+                noMatch:
+                  summary: Below minMatch floor / nonsense address (not an error)
+                  value:
+                    results: []
+        '400':
+          description: Missing `address`, or a field exceeds its maximum length
+          content:
+            application/vnd.addresslookup-service.addresses-find+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: OS Places is unavailable, degraded, or the circuit breaker is open
+          content:
+            application/vnd.addresslookup-service.addresses-find+json:
+              schema:
+                $ref: '#/components/schemas/DegradedResponse'
+              examples:
+                upstreamRateLimit:
+                  summary: OS Places rate limit exceeded
+                  value: { degraded: true, reason: upstream-rate-limit, retryAfterSeconds: 30 }
+
+components:
+  schemas:
+    # ---- Search ----
+    AddressResponseInclude:
+      type: string
+      description: Additional data to nest per candidate.
+      enum: [dpa]
+
+    AddressSearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          description: Candidate addresses in the canonical CP contract. Empty when there are no matches.
+          items:
+            $ref: '#/components/schemas/AddressCandidate'
+
+    AddressCandidate:
+      type: object
+      description: A single address candidate in the canonical CP contract, derived from an OS Places DPA record.
+      additionalProperties: false
+      required: [address1, postcode, uprn]
+      properties:
+        address1:
+          type: string
+          minLength: 1
+          maxLength: 35
+          description: Primary address line (e.g. building name/number and street).
+          example: "10 Downing Street"
+        address2:
+          type: string
+          maxLength: 35
+          description: Secondary address line. Omitted when not applicable.
+        address3:
+          type: string
+          maxLength: 35
+        address4:
+          type: string
+          maxLength: 35
+        address5:
+          type: string
+          maxLength: 35
+          description: Fifth address line. Omitted when not applicable.
+        postcode:
+          type: string
+          maxLength: 8
+          pattern: '^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$'
+          description: Normalised UK postcode.
+          example: "SW1A 1AA"
+        uprn:
+          type: string
+          pattern: '^[0-9]{1,12}$'
+          description: OS Places Unique Property Reference Number.
+          example: "10033544886"
+        match:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: OS Places match score. Only populated on the `/addresses/find` match endpoint.
+        dpa:
+          type: object
+          additionalProperties: true
+          description: Raw OS Places DPA record for this candidate. Only present when `include=dpa` was requested.
+
+    # ---- Degraded mode ----
+    DegradedReason:
+      type: string
+      description: Machine-readable reason the request could not be served by OS Places.
+      enum:
+        - upstream-timeout
+        - upstream-rate-limit
+        - upstream-auth
+        - upstream-contract
+        - circuit-open
+
+    DegradedResponse:
+      type: object
+      description: Returned when OS Places is unavailable, degraded, or the circuit breaker is open. Not returned for zero-result searches, which are a normal `200`.
+      additionalProperties: false
+      required: [degraded, reason]
+      properties:
+        degraded:
+          type: boolean
+          description: Always `true` on this response.
+          example: true
+        reason:
+          $ref: '#/components/schemas/DegradedReason'
+        retryAfterSeconds:
+          type: integer
+          minimum: 0
+          description: Advisory retry delay, populated for rate-limit conditions where known.
+
+    # ---- Errors ----
+    ErrorResponse:
+      type: object
+      required: [error, message, timestamp, traceId]
+      properties:
+        error:
+          type: string
+          description: Numeric HTTP status code as a string (e.g. "400").
+          example: "400"
+        message:
+          type: string
+          description: Human-readable, field-level error description.
+          example: "At least one of 'postcode' or 'firstLine' must be supplied."
+        timestamp:
+          type: string
+          format: date-time
+          description: UTC timestamp when the error was created.
+        traceId:
+          type: string
+          description: Unique identifier for tracing requests.
+          example: "a1b2c3d4e5f6g7h8"

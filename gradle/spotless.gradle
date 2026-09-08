@@ -1,0 +1,27 @@
+// Formats only the generated OpenAPI sources; hand-written code is left to PMD.
+def formatterUrl = 'https://raw.githubusercontent.com/hmcts/api-cp-code-style/refs/heads/main/config/formatter/eclipse-formatter.xml'
+def formatterPath = "${layout.buildDirectory.get().asFile.absolutePath}/eclipse-formatter.xml"
+
+tasks.register('downloadFormatter') {
+  outputs.file(formatterPath)
+  doLast {
+    def f = new File(formatterPath)
+    f.parentFile.mkdirs()
+    f.text = new URI(formatterUrl).toURL().text
+  }
+}
+
+spotless {
+  java {
+    target 'build/generated/src/main/**/*.java'
+    removeUnusedImports()
+    eclipse().configFile(formatterPath)
+  }
+}
+
+tasks.named('spotlessApply') {
+  dependsOn tasks.named('openApiGenerate'), tasks.named('downloadFormatter')
+}
+tasks.named('spotlessJava') {
+  dependsOn tasks.named('openApiGenerate'), tasks.named('downloadFormatter')
+}

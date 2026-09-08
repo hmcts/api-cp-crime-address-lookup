@@ -1,90 +1,74 @@
-# API HMCTS Marketplace Template Repository
+# Address Lookup API
 
-This is a template repository for HMCTS Marketplace APIs. It defines naming conventions, structure, and validation tooling for OpenAPI specifications.
+**Repository:** api-cp-crime-address-lookup
 
-The repository template and its associated build workflows are designed to support a single API specification per repository.
+**Purpose:** This repository contains the OpenAPI specification, generated server interfaces/models, and contract-verification tests for the Address Lookup API — a Common Platform API that looks up and validates UK addresses (via OS Places) and returns them in the canonical CP address contract (`address1`-`address5`, `postcode`, `uprn`).
 
-> 🔗 API definitions should follow the [HMCTS RESTful API Standards](https://hmcts.github.io/restful-api-standards/).
+**This repository is a contract-only library.** It does **not** contain a runnable service: no controllers, no service layer, no OS Places HTTP client, no business logic. It publishes a jar of the generated request/response interfaces and models to GitHub Packages / Azure Artifacts, for a separate runtime service repository to depend on and implement.
 
-## Naming Convention
+For the full functional/non-functional design (validation rules, OS Places integration behaviour, auth, resilience, caching), see
+`design-address-lookup-springboot.md` in the `cp-meta-arch` design-change repository.
 
-> NOTE: Avoid using terms like `common, core, base, utils, helpers, misc, or shared`.
-> These names often allow for ambiguous ownership and quickly become black holes where cohesion goes to die.
+---
 
-Repository names follow a pattern from generic to specific:
+## Quick links
 
+* OpenAPI spec: `src/main/resources/openapi/address-lookup-api.openapi.yml`
+* Generated sources: `build/generated/src/main/java` (populated by `openApiGenerate`, not committed)
+* Main Gradle tasks:
+
+    * `./gradlew openApiGenerate` — generate API interfaces & models from the OpenAPI spec
+    * `./gradlew clean build` — full build (generate → format → compile → test → jacoco)
+    * `./gradlew test` — run tests
+
+---
+
+## API summary (contract highlights)
+
+* `GET /addresses` — search by `postcode` and/or `firstLine` (at least one required). Optional `include=dpa` nests the raw OS Places DPA record.
+* `GET /addresses/find` — match a free-text `address` string against OS Places, with an optional `minMatch` score floor.
+
+Both endpoints return `200` with a `results` array (possibly empty — a zero-result search is not an error), `400` on invalid input, or `503` with a `DegradedResponse` when OS Places is unavailable/degraded/circuit-open.
+
+See the spec file for full parameter, schema, and example detail.
+
+---
+
+## OpenAPI & generation notes
+
+1. **Spec file name**: `address-lookup-api.openapi.yml` (under `src/main/resources/openapi`). Exactly one `*.openapi.yml` file must exist — `gradle/openapi.gradle` fails the build otherwise.
+2. **Generator configuration**: OpenAPI Generator `spring`, interface-only, `useLombok: false` on generated models (avoids duplicate-constructor clashes) — see `gradle/openapi.gradle`. Lombok is for hand-written code only (`OpenAPIConfigurationLoader`).
+3. **Regenerate** after editing the spec:
+
+```bash
+./gradlew clean openApiGenerate spotlessApply build
 ```
-api-{sources-system}-[case-type]-{business-domain}-{name-of-entity}
+
+Spotless formats generated sources only; it runs automatically before `compileJava`.
+
+---
+
+## Building & testing
+
+```bash
+./gradlew clean build
 ```
-* `sources-system`: 
-Some examples are:
-  * `cp` - Common Platform
-  * `dcs` - Crown Court Digital Case System
-  * `sscs` - Social Security and Child Support
-    
-* `case-type`: optional parameter could be:
 
-  * civil 
-  * crime 
-  * family 
-  * tribunal
+Tests live under `src/test/java/uk/gov/hmcts/cp/openapi/model/al/` and cover three things, kept in sync whenever the spec changes:
 
-HMCTS manages all Civil, Criminal, Family (separate from civil), and Tribunal cases.
+* `GeneratedApiContractsExistTest` — asserts required/type/format/enum values directly against the parsed OpenAPI spec.
+* `GeneratedModelContractsExistTest` — reflection checks that generated model classes and accessors exist, and enum values are as expected.
+* `GeneratedObjectMappingTest` — Jackson (de)serialisation round-trips for each schema.
 
-* `business-domain`, or also could be known as `product-domain`
+`API_SPEC_VERSION` (system property, defaults to `0.0.0`) controls the `info.version` the CI pipeline stamps into the spec at build time — see `docs/OPENAPI-SPEC-VERSIONING.md`.
 
-The Common Platform (CP) will be:
-  * `caseingestion`
-  * `casematerial`
-  * `caseadmin`
-  * `casehearing`
-  * `schedulingandlisting`
+---
 
-### Reference Data Repositories
+## Contributing
 
-Reference data APIs use the following naming format:
+When adding or changing an endpoint/schema: update the spec, then update all three test classes above together. Follow `.github/CONTRIBUTING.md` for PR and branching rules.
 
-```
-api-cp-refdata-{product-domain}-{name-of-entity}
-```
-It could be argued that `product-domain` should be optional for reference data, placing it under global ownership. But global ownership often means no ownership — and no accountability. Therefore, `product-domain` is **required**.
-
-## Supporting Documents
-
-The [`docs`](./docs) directory includes supporting information for the repository:
-
-- [`API-VERSIONING-STRATEGY.md`](./docs/API-VERSIONING-STRATEGY.md) – How we version APIs using media types and SemVer.
-- [`CHAIN_OF_CUSTODY.md`](./docs/CHAIN_OF_CUSTODY.md) – Steps taken to establish a secure software supply chain and audit trail.
-- [`DATA-PRODUCTS.md`](./docs/DATA-PRODUCTS.md) – Description of structured data outputs generated by the API.
-- [`GITHUB-ACTIONS.md`](./docs/GITHUB-ACTIONS.md) – Overview of GitHub Actions workflows, including secrets and variables.
-- [`OPENAPI-FILE-CONVENTIONS.md`](./docs/OPENAPI-FILE-CONVENTIONS.md) – OpenAPI file and content conventions.
-- [`OPENAPI-SPEC-VERSIONING.md`](./docs/OPENAPI-SPEC-VERSIONING.md) – Rules for evolving OpenAPI specs.
-  
-> **Note** the build requires secrets and variables to be available in project settings; see [GitHub Actions: Required Secrets and Variables](./docs/GITHUB-ACTIONS.md)
-
-## Post-Template Manual Steps
-
-### Setup
-
-* Go to settings of the repository -> General -> check "Automatically delete head branches"
-* Import the ruleset `.github/rulesets/main-branch-protection.json`  
-  To import the ruleset, follow GitHub’s instructions here:  
-  👉 [Importing a ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/managing-rulesets-for-a-repository#importing-a-ruleset)
-  
-Once the ruleset has been successfully imported via GitHub Settings, the new repository no longer requires `.github/rulesets/main-branch-protection.json` so it **should be deleted**:
-
-### Clean Up
-
-After using this template to create your repository, the following files are no longer needed and **should be deleted**:
-
-- `./docs/*`
-- `./src/main/resources/openapi/deleteme`
-
-Update the `./README.md` to reflect the context of the new created repository
-
-### Contribute to This Repository
-
-Contributions are welcome! Please see the [CONTRIBUTING.md](.github/CONTRIBUTING.md) file for guidelines.
+---
 
 ## License
 
