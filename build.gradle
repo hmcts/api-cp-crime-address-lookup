@@ -1,6 +1,7 @@
 plugins {
   id 'java'
   id 'org.openapi.generator' version '7.25.0'
+  id 'com.diffplug.spotless' version '8.0.0'
   id 'jacoco'
   id 'maven-publish'
   id "com.github.ben-manes.versions" version "0.61.0"
@@ -18,6 +19,7 @@ apply {
   from("$rootDir/gradle/pmd.gradle")
   from("$rootDir/gradle/test.gradle")
   from("$rootDir/gradle/openapi.gradle")
+  from("$rootDir/gradle/spotless.gradle")
   from("$rootDir/gradle/jar.gradle")
 }
 
@@ -27,21 +29,26 @@ ext {
 }
 
 dependencies {
-  implementation "org.openapitools:openapi-generator-core:7.25.0"
+  // Generator libs are NOT included here - the openapi.generator plugin handles code
+  // generation itself; only the runtime pieces the generated interfaces/models need at
+  // compile/runtime, plus what OpenAPIConfigurationLoader needs to parse the spec, go here.
   implementation "io.swagger.parser.v3:swagger-parser:2.1.48"
-  implementation "io.swagger.core.v3:swagger-annotations:2.2.55"
+  implementation "io.swagger.core.v3:swagger-models:2.2.55"
+  compileOnly "io.swagger.core.v3:swagger-annotations:2.2.55"
   implementation "net.logstash.logback:logstash-logback-encoder:9.0"
 
   implementation "com.fasterxml.jackson.core:jackson-annotations:2.22"
   implementation "org.springframework.boot:spring-boot-starter-web:$springBootVersion"
   implementation "org.springframework.boot:spring-boot-starter-validation:$springBootVersion"
-  testImplementation "org.springframework.boot:spring-boot-starter-test:$springBootVersion"
 
+  // Lombok is for hand-written code (e.g. OpenAPIConfigurationLoader) only - never for
+  // generated models, see gradle/openapi.gradle's useLombok:false.
   compileOnly "org.projectlombok:lombok:$lombokVersion"
   testCompileOnly "org.projectlombok:lombok:$lombokVersion"
   annotationProcessor "org.projectlombok:lombok:$lombokVersion"
   testAnnotationProcessor "org.projectlombok:lombok:$lombokVersion"
 
+  testImplementation "org.assertj:assertj-core:3.27.3"
   testImplementation(platform("org.junit:junit-bom:6.1.3"))
   testImplementation "org.junit.jupiter:junit-jupiter-api"
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"

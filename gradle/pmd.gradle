@@ -13,15 +13,13 @@ tasks.named("pmdTest").configure {
 }
 
 tasks.withType(Pmd) {
-  reports {
-    xml.required.set(true)
-    html.required.set(true)
-  }
-}
-
-tasks.withType(Checkstyle).configureEach {
+  // exclude generated OpenAPI sources - we don't control their style/docs, only the spec
   def generatedDir = file("${layout.buildDirectory.get().asFile.absolutePath}/generated/src/main/java").canonicalPath
   source = source.filter { file ->
     !file.canonicalPath.startsWith(generatedDir)
+  }
+  reports {
+    xml.required.set(true)
+    html.required.set(true)
   }
 }
