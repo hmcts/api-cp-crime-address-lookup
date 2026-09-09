@@ -55,6 +55,16 @@ paths:
 
         `include=dpa` nests the raw OS Places DPA record on each candidate (key material is
         always stripped regardless of this flag).
+
+        Only `postcode`, `firstLine`, and `include` are accepted on this operation. This is a
+        deliberately narrow, non-pass-through contract — OS Places' own `/find` and `/postcode`
+        operations accept several other parameters (e.g. `bbox`, `minmatch`, `dataset`), but none
+        of those are meaningful across both of this operation's internal routing branches, and
+        some (`bbox`, `minmatch`) don't exist at all on OS's `/postcode` operation. A request
+        carrying any query parameter other than the three above is rejected with `400` before any
+        routing decision is made or upstream call attempted — implementations must not silently
+        ignore unrecognised parameters, since that would let a client believe a filter (e.g.
+        `bbox`) was applied when it was not.
       operationId: searchAddresses
       parameters:
         - name: postcode
@@ -100,7 +110,10 @@ paths:
                   value:
                     results: []
         '400':
-          description: Neither `postcode` nor `firstLine` supplied, or a field exceeds its maximum length
+          description: >-
+            Neither `postcode` nor `firstLine` supplied, a field exceeds its maximum length, or
+            the request contains a query parameter this operation does not accept (only
+            `postcode`, `firstLine`, `include` are valid)
           content:
             application/vnd.addresslookup-service.addresses+json:
               schema:
@@ -131,6 +144,11 @@ paths:
         minimum match-score floor. Candidates carry a `match` score (0-1). A search with no
         candidates scoring at or above `minMatch` returns `200` with an empty `results` array —
         this is not an error.
+
+        Only `address` and `minMatch` are accepted on this operation. A request carrying any
+        other query parameter (e.g. `bbox`, `dataset`, `matchprecision`) is rejected with `400`
+        before any upstream call is attempted — implementations must not silently ignore
+        unrecognised parameters.
       operationId: findAddress
       parameters:
         - name: address
@@ -175,7 +193,9 @@ paths:
                   value:
                     results: []
         '400':
-          description: Missing `address`, or a field exceeds its maximum length
+          description: >-
+            Missing `address`, a field exceeds its maximum length, or the request contains a
+            query parameter this operation does not accept (only `address`, `minMatch` are valid)
           content:
             application/vnd.addresslookup-service.addresses-find+json:
               schema:
