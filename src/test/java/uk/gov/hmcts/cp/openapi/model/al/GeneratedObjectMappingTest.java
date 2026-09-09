@@ -97,14 +97,14 @@ class GeneratedObjectMappingTest {
     void json_should_map_to_ErrorResponse_object() throws JsonProcessingException {
         String json = "{\n"
                 + "  \"error\": \"400\",\n"
-                + "  \"message\": \"At least one of 'postcode' or 'firstLine' must be supplied.\",\n"
+                + "  \"message\": \"'postcode' is required.\",\n"
                 + "  \"timestamp\": \"2025-01-01T11:11:11Z\",\n"
                 + "  \"traceId\": \"a1b2c3d4e5f6g7h8\"\n"
                 + "}";
 
         ErrorResponse errorResponse = mapper.readValue(json, ErrorResponse.class);
         assertThat(errorResponse.getError()).isEqualTo("400");
-        assertThat(errorResponse.getMessage()).isEqualTo("At least one of 'postcode' or 'firstLine' must be supplied.");
+        assertThat(errorResponse.getMessage()).isEqualTo("'postcode' is required.");
         assertThat(toText(errorResponse.getTimestamp())).isEqualTo("2025-01-01T11:11:11Z");
         assertThat(errorResponse.getTraceId()).isEqualTo("a1b2c3d4e5f6g7h8");
     }

@@ -25,10 +25,13 @@ For the full functional/non-functional design (validation rules, OS Places integ
 
 ## API summary (contract highlights)
 
-* `GET /addresses` — search by `postcode` and/or `firstLine` (at least one required). Optional `include=dpa` nests the raw OS Places DPA record.
+* `GET /addresses/postcode` — search by `postcode` (required). Thin pass-through to OS Places' `/postcode` operation.
+* `GET /addresses` — search by free-text `address` (required; may include a postcode inline for narrower relevance). Thin pass-through to OS Places' `/find` operation.
 * `GET /addresses/find` — match a free-text `address` string against OS Places, with an optional `minMatch` score floor.
 
-Both endpoints return `200` with a `results` array (possibly empty — a zero-result search is not an error), `400` on invalid input, or `503` with a `DegradedResponse` when OS Places is unavailable/degraded/circuit-open.
+Each of the three maps 1:1 to one underlying OS Places operation and accepts only its own declared parameters (plus `include` on the two search endpoints) — a request carrying any other query parameter is rejected with `400`, not silently ignored.
+
+All three endpoints return `200` with a `results` array (possibly empty — a zero-result search is not an error), `400` on invalid input, or `503` with a `DegradedResponse` when OS Places is unavailable/degraded/circuit-open.
 
 See the spec file for full parameter, schema, and example detail.
 

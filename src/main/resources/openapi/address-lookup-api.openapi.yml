@@ -5,6 +5,10 @@ info:
     Looks up and validates UK addresses via OS Places, returning the canonical
     HMCTS Common Platform address contract (`address1`-`address5`, `postcode`, `uprn`).
 
+    This API always queries OS Places with `dataset=DPA`; `dataset` is not client-selectable on
+    any operation. **LPI-only records — addresses that exist in OS Places' LPI dataset but have
+    no corresponding DPA entry — are never returned.**
+
     This repository contains **only** the OpenAPI contract for this API: the specification file,
     generated request/response interfaces and models, and contract-verification tests. It does
     **not** contain a runnable service — no controllers, no service layer, no OS Places HTTP
@@ -32,7 +36,7 @@ servers:
 
 tags:
   - name: Address Search
-    description: Search UK addresses by postcode and/or free-text first line, returning candidate addresses in the canonical CP contract.
+    description: Search UK addresses by postcode, or by free text, returning candidate addresses in the canonical CP contract.
   - name: Address Match
     description: Match a single free-text address string against OS Places to validate/resolve it to the best-scoring candidate(s).
 
@@ -40,49 +44,37 @@ paths:
   # ---------------------------
   # Address Search
   # ---------------------------
-  /addresses:
+  /addresses/postcode:
     get:
       tags: [Address Search]
-      summary: Search addresses by postcode and/or free-text first line
+      summary: Search addresses by postcode
       description: |
-        Searches OS Places for candidate addresses. At least one of `postcode` or `firstLine`
-        must be supplied; a request with neither is rejected with `400` and no upstream call is
-        made. Supplying both combines them into a single free-text search (`firstLine` and
-        `postcode` concatenated) — this improves relevance but is **not** a strict postcode
-        filter: OS Places' free-text matching can still return a candidate whose postcode differs
-        from the one supplied if its other terms score highly enough. A search with no matches
-        returns `200` with an empty `results` array — this is not an error.
+        Searches OS Places for candidates matching the given postcode. `postcode` is required —
+        full or partial UK postcodes are both accepted (OS Places handles partial-postcode
+        matching natively). A search with no matches returns `200` with an empty `results` array
+        — this is not an error.
 
         `include=dpa` nests the raw OS Places DPA record on each candidate (key material is
         always stripped regardless of this flag).
 
-        Only `postcode`, `firstLine`, and `include` are accepted on this operation. This is a
-        deliberately narrow, non-pass-through contract — OS Places' own `/find` and `/postcode`
-        operations accept several other parameters (e.g. `bbox`, `minmatch`, `dataset`), but none
-        of those are meaningful across both of this operation's internal routing branches, and
-        some (`bbox`, `minmatch`) don't exist at all on OS's `/postcode` operation. A request
-        carrying any query parameter other than the three above is rejected with `400` before any
-        routing decision is made or upstream call attempted — implementations must not silently
-        ignore unrecognised parameters, since that would let a client believe a filter (e.g.
-        `bbox`) was applied when it was not.
-      operationId: searchAddresses
+        Only `postcode` and `include` are accepted on this operation — OS Places' own `/postcode`
+        operation doesn't have `bbox`/`minmatch`/`matchprecision` fields at all, and this API
+        doesn't pass through its other parameters (`dataset`, `lr`, `output_srs`, `fq`, `offset`,
+        `maxresults`) either. `dataset` is always `DPA` server-side and is not client-selectable
+        — LPI-only records are never returned (see the top-level API description). A request
+        carrying any other query parameter is rejected with `400` before any upstream call is
+        attempted — implementations must not silently ignore unrecognised parameters, since that
+        would let a client believe a filter was applied when it was not.
+      operationId: searchByPostcode
       parameters:
         - name: postcode
           in: query
-          required: false
-          description: Full or partial UK postcode. At least one of `postcode`/`firstLine` is required.
+          required: true
+          description: Full or partial UK postcode.
           schema:
             type: string
             maxLength: 10
           example: "SW1A 1AA"
-        - name: firstLine
-          in: query
-          required: false
-          description: Free-text first line of the address (e.g. building name/number and street). At least one of `postcode`/`firstLine` is required.
-          schema:
-            type: string
-            maxLength: 100
-          example: "10 Downing Street"
         - name: include
           in: query
           required: false
@@ -93,7 +85,7 @@ paths:
         '200':
           description: Search completed (possibly with zero results)
           content:
-            application/vnd.addresslookup-service.addresses+json:
+            application/vnd.addresslookup-service.addresses-postcode+json:
               schema:
                 $ref: '#/components/schemas/AddressSearchResponse'
               examples:
@@ -111,9 +103,91 @@ paths:
                     results: []
         '400':
           description: >-
-            Neither `postcode` nor `firstLine` supplied, a field exceeds its maximum length, or
-            the request contains a query parameter this operation does not accept (only
-            `postcode`, `firstLine`, `include` are valid)
+            Missing `postcode`, `postcode` exceeds its maximum length, or the request contains a
+            query parameter this operation does not accept (only `postcode`, `include` are valid)
+          content:
+            application/vnd.addresslookup-service.addresses-postcode+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: OS Places is unavailable, degraded, or the circuit breaker is open
+          content:
+            application/vnd.addresslookup-service.addresses-postcode+json:
+              schema:
+                $ref: '#/components/schemas/DegradedResponse'
+              examples:
+                upstreamTimeout:
+                  summary: OS Places did not respond in time
+                  value: { degraded: true, reason: upstream-timeout }
+                circuitOpen:
+                  summary: Circuit breaker already open, no upstream call attempted
+                  value: { degraded: true, reason: circuit-open }
+
+  /addresses:
+    get:
+      tags: [Address Search]
+      summary: Search addresses by free text
+      description: |
+        Searches OS Places by free text. `address` is required and is forwarded to OS Places
+        as-is — this operation is a thin pass-through to OS's free-text matching, with no
+        server-side combining logic. To narrow results to a specific postcode, include it as
+        part of the `address` text (e.g. `"10 Downing Street SW1A 1AA"`); this improves relevance
+        but is **not** a strict postcode filter, since OS Places' free-text matching can still
+        return a candidate whose postcode differs from the one included if its other terms score
+        highly enough. A search with no matches returns `200` with an empty `results` array —
+        this is not an error.
+
+        `include=dpa` nests the raw OS Places DPA record on each candidate (key material is
+        always stripped regardless of this flag).
+
+        Only `address` and `include` are accepted on this operation — `dataset` is always `DPA`
+        server-side and is not client-selectable (LPI-only records are never returned; see the
+        top-level API description). A request carrying any other query parameter (e.g. `bbox`,
+        `minmatch`, `dataset`) is rejected with `400` before any upstream call is attempted —
+        implementations must not silently ignore unrecognised parameters. Callers that need a
+        match-score floor should use `/addresses/find` instead.
+      operationId: searchAddresses
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: >-
+            Free-text address to search for, optionally including a postcode (e.g.
+            `"10 Downing Street SW1A 1AA"`).
+          schema:
+            type: string
+            maxLength: 200
+          example: "10 Downing Street SW1A 1AA"
+        - name: include
+          in: query
+          required: false
+          description: Additional data to include per candidate. `dpa` nests the raw OS Places DPA record.
+          schema:
+            $ref: '#/components/schemas/AddressResponseInclude'
+      responses:
+        '200':
+          description: Search completed (possibly with zero results)
+          content:
+            application/vnd.addresslookup-service.addresses+json:
+              schema:
+                $ref: '#/components/schemas/AddressSearchResponse'
+              examples:
+                freeTextMatch:
+                  summary: Free-text search with candidates
+                  value:
+                    results:
+                      - address1: "10"
+                        address2: "Downing Street"
+                        postcode: "SW1A 1AA"
+                        uprn: "10033544886"
+                noMatches:
+                  summary: Zero results (not an error)
+                  value:
+                    results: []
+        '400':
+          description: >-
+            Missing `address`, `address` exceeds its maximum length, or the request contains a
+            query parameter this operation does not accept (only `address`, `include` are valid)
           content:
             application/vnd.addresslookup-service.addresses+json:
               schema:
@@ -145,10 +219,11 @@ paths:
         candidates scoring at or above `minMatch` returns `200` with an empty `results` array —
         this is not an error.
 
-        Only `address` and `minMatch` are accepted on this operation. A request carrying any
-        other query parameter (e.g. `bbox`, `dataset`, `matchprecision`) is rejected with `400`
-        before any upstream call is attempted — implementations must not silently ignore
-        unrecognised parameters.
+        Only `address` and `minMatch` are accepted on this operation — `dataset` is always `DPA`
+        server-side and is not client-selectable (LPI-only records are never returned; see the
+        top-level API description). A request carrying any other query parameter (e.g. `bbox`,
+        `dataset`, `matchprecision`) is rejected with `400` before any upstream call is attempted
+        — implementations must not silently ignore unrecognised parameters.
       operationId: findAddress
       parameters:
         - name: address
@@ -316,7 +391,7 @@ components:
         message:
           type: string
           description: Human-readable, field-level error description.
-          example: "At least one of 'postcode' or 'firstLine' must be supplied."
+          example: "'postcode' is required."
         timestamp:
           type: string
           format: date-time

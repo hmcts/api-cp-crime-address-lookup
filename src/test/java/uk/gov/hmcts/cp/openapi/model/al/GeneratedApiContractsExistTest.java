@@ -26,6 +26,8 @@ class GeneratedApiContractsExistTest {
         assertThat(info.getDescription()).contains("OS Places");
         assertThat(info.getDescription()).contains("HMCTS Common Platform");
         assertThat(info.getDescription()).contains("OpenAPI contract for this API");
+        assertThat(info.getDescription()).contains("dataset=DPA");
+        assertThat(info.getDescription()).contains("LPI-only records");
 
         assertThat(info.getVersion()).isEqualTo(expectedVersion);
 
@@ -129,7 +131,31 @@ class GeneratedApiContractsExistTest {
     }
 
     @Test
-    void addresses_path_should_declare_search_query_parameters() {
+    void addresses_postcode_path_should_declare_postcode_query_parameters() {
+        OpenAPI openAPI = new OpenAPIConfigurationLoader().openAPI();
+        var operation = openAPI.getPaths().get("/addresses/postcode").getGet();
+
+        assertThat(operation.getOperationId()).isEqualTo("searchByPostcode");
+        List<String> paramNames = operation.getParameters().stream()
+                .map(io.swagger.v3.oas.models.parameters.Parameter::getName)
+                .toList();
+        assertThat(paramNames).containsExactlyInAnyOrder("postcode", "include");
+
+        var postcodeParam = operation.getParameters().stream()
+                .filter(p -> p.getName().equals("postcode"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(postcodeParam.getRequired()).isTrue();
+
+        var includeParam = operation.getParameters().stream()
+                .filter(p -> p.getName().equals("include"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(includeParam.getRequired()).isNotEqualTo(Boolean.TRUE);
+    }
+
+    @Test
+    void addresses_path_should_declare_free_text_search_query_parameters() {
         OpenAPI openAPI = new OpenAPIConfigurationLoader().openAPI();
         var operation = openAPI.getPaths().get("/addresses").getGet();
 
@@ -137,9 +163,13 @@ class GeneratedApiContractsExistTest {
         List<String> paramNames = operation.getParameters().stream()
                 .map(io.swagger.v3.oas.models.parameters.Parameter::getName)
                 .toList();
-        assertThat(paramNames).containsExactlyInAnyOrder("postcode", "firstLine", "include");
-        assertThat(operation.getParameters().stream()
-                .noneMatch(io.swagger.v3.oas.models.parameters.Parameter::getRequired)).isTrue();
+        assertThat(paramNames).containsExactlyInAnyOrder("address", "include");
+
+        var addressParam = operation.getParameters().stream()
+                .filter(p -> p.getName().equals("address"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(addressParam.getRequired()).isTrue();
     }
 
     @Test
