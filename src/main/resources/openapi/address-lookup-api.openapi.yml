@@ -119,6 +119,9 @@ paths:
                 upstreamTimeout:
                   summary: OS Places did not respond in time
                   value: { degraded: true, reason: upstream-timeout }
+                upstreamServerError:
+                  summary: OS Places returned a 500 Internal Server Error
+                  value: { degraded: true, reason: upstream-server-error }
                 circuitOpen:
                   summary: Circuit breaker already open, no upstream call attempted
                   value: { degraded: true, reason: circuit-open }
@@ -202,6 +205,9 @@ paths:
                 upstreamTimeout:
                   summary: OS Places did not respond in time
                   value: { degraded: true, reason: upstream-timeout }
+                upstreamServerError:
+                  summary: OS Places returned a 500 Internal Server Error
+                  value: { degraded: true, reason: upstream-server-error }
                 circuitOpen:
                   summary: Circuit breaker already open, no upstream call attempted
                   value: { degraded: true, reason: circuit-open }
@@ -285,6 +291,9 @@ paths:
                 upstreamRateLimit:
                   summary: OS Places rate limit exceeded
                   value: { degraded: true, reason: upstream-rate-limit, retryAfterSeconds: 30 }
+                upstreamServerError:
+                  summary: OS Places returned a 500 Internal Server Error
+                  value: { degraded: true, reason: upstream-server-error }
 
 components:
   schemas:
@@ -357,6 +366,7 @@ components:
       description: Machine-readable reason the request could not be served by OS Places.
       enum:
         - upstream-timeout
+        - upstream-server-error
         - upstream-rate-limit
         - upstream-auth
         - upstream-contract
