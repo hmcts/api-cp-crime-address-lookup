@@ -29,11 +29,11 @@ class GeneratedModelContractsExistTest {
     @Test
     void addressCandidate_should_have_expected_accessors() throws Exception {
         Class<?> cls = Class.forName("uk.gov.hmcts.cp.openapi.model.al.AddressCandidate");
-        assertHasGetter(cls, "getAddress1");
-        assertHasGetter(cls, "getAddress2");
-        assertHasGetter(cls, "getAddress3");
-        assertHasGetter(cls, "getAddress4");
-        assertHasGetter(cls, "getAddress5");
+        assertHasGetter(cls, "getLine1");
+        assertHasGetter(cls, "getLine2");
+        assertHasGetter(cls, "getLine3");
+        assertHasGetter(cls, "getLine4");
+        assertHasGetter(cls, "getLine5");
         assertHasGetter(cls, "getPostcode");
         assertHasGetter(cls, "getUprn");
         assertHasGetter(cls, "getMatch");

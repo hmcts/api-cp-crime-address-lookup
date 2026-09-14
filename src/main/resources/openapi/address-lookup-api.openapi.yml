@@ -3,7 +3,7 @@ info:
   title: Address Lookup API
   description: |
     Looks up and validates UK addresses via OS Places, returning the canonical
-    HMCTS Common Platform address contract (`address1`-`address5`, `postcode`, `uprn`).
+    HMCTS Common Platform address contract (`line1`-`line5`, `postcode`, `uprn`).
 
     This API always queries OS Places with `dataset=DPA`; `dataset` is not client-selectable on
     any operation. **LPI-only records — addresses that exist in OS Places' LPI dataset but have
@@ -93,8 +93,8 @@ paths:
                   summary: Postcode search with candidates
                   value:
                     results:
-                      - address1: "10"
-                        address2: "Downing Street"
+                      - line1: "10"
+                        line2: "Downing Street"
                         postcode: "SW1A 1AA"
                         uprn: "10033544886"
                 noMatches:
@@ -179,8 +179,8 @@ paths:
                   summary: Free-text search with candidates
                   value:
                     results:
-                      - address1: "10"
-                        address2: "Downing Street"
+                      - line1: "10"
+                        line2: "Downing Street"
                         postcode: "SW1A 1AA"
                         uprn: "10033544886"
                 noMatches:
@@ -264,8 +264,8 @@ paths:
                   summary: Single high-confidence match
                   value:
                     results:
-                      - address1: "10"
-                        address2: "Downing Street"
+                      - line1: "10"
+                        line2: "Downing Street"
                         postcode: "SW1A 1AA"
                         uprn: "10033544886"
                         match: 0.95
@@ -317,25 +317,25 @@ components:
       type: object
       description: A single address candidate in the canonical CP contract, derived from an OS Places DPA record.
       additionalProperties: false
-      required: [address1, postcode, uprn]
+      required: [line1, postcode, uprn]
       properties:
-        address1:
+        line1:
           type: string
           minLength: 1
           maxLength: 35
           description: Primary address line (e.g. building name/number and street).
           example: "10 Downing Street"
-        address2:
+        line2:
           type: string
           maxLength: 35
           description: Secondary address line. Omitted when not applicable.
-        address3:
+        line3:
           type: string
           maxLength: 35
-        address4:
+        line4:
           type: string
           maxLength: 35
-        address5:
+        line5:
           type: string
           maxLength: 35
           description: Fifth address line. Omitted when not applicable.

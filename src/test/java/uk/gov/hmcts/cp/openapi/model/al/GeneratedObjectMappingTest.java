@@ -17,8 +17,8 @@ class GeneratedObjectMappingTest {
     @Test
     void json_should_map_to_AddressCandidate_object_with_all_fields() throws JsonProcessingException {
         String json = "{\n"
-                + "  \"address1\": \"10\",\n"
-                + "  \"address2\": \"Downing Street\",\n"
+                + "  \"line1\": \"10\",\n"
+                + "  \"line2\": \"Downing Street\",\n"
                 + "  \"postcode\": \"SW1A 1AA\",\n"
                 + "  \"uprn\": \"10033544886\",\n"
                 + "  \"match\": 0.95,\n"
@@ -26,8 +26,8 @@ class GeneratedObjectMappingTest {
                 + "}";
 
         AddressCandidate candidate = mapper.readValue(json, AddressCandidate.class);
-        assertThat(candidate.getAddress1()).isEqualTo("10");
-        assertThat(candidate.getAddress2()).isEqualTo("Downing Street");
+        assertThat(candidate.getLine1()).isEqualTo("10");
+        assertThat(candidate.getLine2()).isEqualTo("Downing Street");
         assertThat(candidate.getPostcode()).isEqualTo("SW1A 1AA");
         assertThat(candidate.getUprn()).isEqualTo("10033544886");
         assertThat(candidate.getMatch()).isEqualByComparingTo("0.95");
@@ -37,14 +37,14 @@ class GeneratedObjectMappingTest {
     @Test
     void json_should_map_to_AddressCandidate_object_with_only_required_fields() throws JsonProcessingException {
         String json = "{\n"
-                + "  \"address1\": \"1\",\n"
+                + "  \"line1\": \"1\",\n"
                 + "  \"postcode\": \"ZZ99 1AA\",\n"
                 + "  \"uprn\": \"1\"\n"
                 + "}";
 
         AddressCandidate candidate = mapper.readValue(json, AddressCandidate.class);
-        assertThat(candidate.getAddress1()).isEqualTo("1");
-        assertThat(candidate.getAddress2()).isNull();
+        assertThat(candidate.getLine1()).isEqualTo("1");
+        assertThat(candidate.getLine2()).isNull();
         assertThat(candidate.getMatch()).isNull();
         assertThat(candidate.getDpa()).isNullOrEmpty();
     }
@@ -53,7 +53,7 @@ class GeneratedObjectMappingTest {
     void json_should_map_to_AddressSearchResponse_with_results() throws JsonProcessingException {
         String json = "{\n"
                 + "  \"results\": [\n"
-                + "    { \"address1\": \"10\", \"address2\": \"Downing Street\", \"postcode\": \"SW1A 1AA\", \"uprn\": \"10033544886\" }\n"
+                + "    { \"line1\": \"10\", \"line2\": \"Downing Street\", \"postcode\": \"SW1A 1AA\", \"uprn\": \"10033544886\" }\n"
                 + "  ]\n"
                 + "}";
 

@@ -2,7 +2,7 @@
 
 **Repository:** api-cp-crime-address-lookup
 
-**Purpose:** This repository contains the OpenAPI specification, generated server interfaces/models, and contract-verification tests for the Address Lookup API — a Common Platform API that looks up and validates UK addresses (via OS Places) and returns them in the canonical CP address contract (`address1`-`address5`, `postcode`, `uprn`).
+**Purpose:** This repository contains the OpenAPI specification, generated server interfaces/models, and contract-verification tests for the Address Lookup API — a Common Platform API that looks up and validates UK addresses (via OS Places) and returns them in the canonical CP address contract (`line1`-`line5`, `postcode`, `uprn`).
 
 **This repository is a contract-only library.** It does **not** contain a runnable service: no controllers, no service layer, no OS Places HTTP client, no business logic. It publishes a jar of the generated request/response interfaces and models to GitHub Packages / Azure Artifacts, for a separate runtime service repository to depend on and implement.
 
