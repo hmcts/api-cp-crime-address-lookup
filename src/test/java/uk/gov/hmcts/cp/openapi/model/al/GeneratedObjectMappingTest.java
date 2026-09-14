@@ -94,6 +94,15 @@ class GeneratedObjectMappingTest {
     }
 
     @Test
+    void json_should_map_to_DegradedResponse_with_upstream_server_error() throws JsonProcessingException {
+        String json = "{ \"degraded\": true, \"reason\": \"upstream-server-error\" }";
+
+        DegradedResponse response = mapper.readValue(json, DegradedResponse.class);
+        assertThat(response.getReason()).isEqualTo(DegradedReason.UPSTREAM_SERVER_ERROR);
+        assertThat(response.getRetryAfterSeconds()).isNull();
+    }
+
+    @Test
     void json_should_map_to_ErrorResponse_object() throws JsonProcessingException {
         String json = "{\n"
                 + "  \"error\": \"400\",\n"

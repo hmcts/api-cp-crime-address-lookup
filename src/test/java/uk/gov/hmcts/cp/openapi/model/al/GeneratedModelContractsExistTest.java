@@ -70,7 +70,8 @@ class GeneratedModelContractsExistTest {
 
         var names = enumValues(enumCls);
         assertTrue(names.containsAll(List.of(
-                "upstream-timeout", "upstream-rate-limit", "upstream-auth", "upstream-contract", "circuit-open"
+                "upstream-timeout", "upstream-server-error", "upstream-rate-limit", "upstream-auth",
+                "upstream-contract", "circuit-open"
         )), "DegradedReason must contain all documented degraded reasons. Was: " + names);
     }
 

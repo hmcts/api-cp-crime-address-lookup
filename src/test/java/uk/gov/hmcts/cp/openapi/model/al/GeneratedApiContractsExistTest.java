@@ -103,7 +103,8 @@ class GeneratedApiContractsExistTest {
         assertThat(schema).isNotNull();
         List<String> enumValues = schema.getEnum().stream().map(String::valueOf).toList();
         assertThat(enumValues).containsExactlyInAnyOrder(
-                "upstream-timeout", "upstream-rate-limit", "upstream-auth", "upstream-contract", "circuit-open"
+                "upstream-timeout", "upstream-server-error", "upstream-rate-limit", "upstream-auth",
+                "upstream-contract", "circuit-open"
         );
     }
 
