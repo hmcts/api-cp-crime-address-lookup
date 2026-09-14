@@ -43,16 +43,16 @@ class GeneratedApiContractsExistTest {
         Schema<?> schema = openAPI.getComponents().getSchemas().get("AddressCandidate");
 
         assertThat(schema).isNotNull();
-        assertThat(schema.getRequired()).containsExactlyInAnyOrder("address1", "postcode", "uprn");
+        assertThat(schema.getRequired()).containsExactlyInAnyOrder("line1", "postcode", "uprn");
         assertThat(schema.getAdditionalProperties()).isEqualTo(Boolean.FALSE);
 
         Map<String, Schema> properties = schema.getProperties();
         assertThat(properties).containsKeys(
-                "address1", "address2", "address3", "address4", "address5", "postcode", "uprn", "match", "dpa"
+                "line1", "line2", "line3", "line4", "line5", "postcode", "uprn", "match", "dpa"
         );
 
-        assertThat(properties.get("address1").getType()).isEqualTo("string");
-        assertThat(properties.get("address1").getMaxLength()).isEqualTo(35);
+        assertThat(properties.get("line1").getType()).isEqualTo("string");
+        assertThat(properties.get("line1").getMaxLength()).isEqualTo(35);
 
         assertThat(properties.get("postcode").getType()).isEqualTo("string");
         assertThat(properties.get("postcode").getMaxLength()).isEqualTo(8);
