@@ -52,11 +52,12 @@ class GeneratedApiContractsExistTest {
         );
 
         assertThat(properties.get("line1").getType()).isEqualTo("string");
-        assertThat(properties.get("line1").getMaxLength()).isEqualTo(35);
+        assertThat(properties.get("line1").getMinLength()).isEqualTo(1);
+        assertThat(properties.get("line1").getMaxLength()).isNull();
 
         assertThat(properties.get("postcode").getType()).isEqualTo("string");
-        assertThat(properties.get("postcode").getMaxLength()).isEqualTo(8);
-        assertThat(properties.get("postcode").getPattern()).isEqualTo("^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$");
+        assertThat(properties.get("postcode").getMaxLength()).isNull();
+        assertThat(properties.get("postcode").getPattern()).isNull();
 
         assertThat(properties.get("uprn").getType()).isEqualTo("string");
         assertThat(properties.get("uprn").getPattern()).isEqualTo("^[0-9]{1,12}$");
