@@ -322,28 +322,23 @@ components:
         line1:
           type: string
           minLength: 1
-          maxLength: 35
-          description: Primary address line (e.g. building name/number and street).
+          description: Primary address line (e.g. building name/number and street). Passed through
+            from OS Places as-is, with no length restriction imposed by this contract.
           example: "10 Downing Street"
         line2:
           type: string
-          maxLength: 35
           description: Secondary address line. Omitted when not applicable.
         line3:
           type: string
-          maxLength: 35
         line4:
           type: string
-          maxLength: 35
         line5:
           type: string
-          maxLength: 35
           description: Fifth address line. Omitted when not applicable.
         postcode:
           type: string
-          maxLength: 8
-          pattern: '^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$'
-          description: Normalised UK postcode.
+          description: Postcode as returned by OS Places, with no length or format restriction
+            imposed by this contract.
           example: "SW1A 1AA"
         uprn:
           type: string
