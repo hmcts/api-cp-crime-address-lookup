@@ -6,6 +6,8 @@
 
 **This repository is a contract-only library.** It does **not** contain a runnable service: no controllers, no service layer, no OS Places HTTP client, no business logic. It publishes a jar of the generated request/response interfaces and models to GitHub Packages / Azure Artifacts, for a separate runtime service repository to depend on and implement.
 
+**Integrating against this API?** Start with [`docs/USAGE-GUIDE.md`](docs/USAGE-GUIDE.md) — it covers every operation's parameters, the canonical `Address` schema, all response classes (success, zero-result, degraded, 400, and where 401 actually comes from), consumption paths, and operational facts (timeouts, caching, per-environment backend), so you can integrate without reading service code.
+
 For the full functional/non-functional design (validation rules, OS Places integration behaviour, auth, resilience, caching), see
 `design-address-lookup-springboot.md` in the `cp-meta-arch` design-change repository.
 
