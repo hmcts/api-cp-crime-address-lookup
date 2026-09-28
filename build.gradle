@@ -1,7 +1,7 @@
 plugins {
   id 'java'
   id 'org.openapi.generator' version '7.25.0'
-  id 'com.diffplug.spotless' version '8.10.2'
+  id 'com.diffplug.spotless' version '8.10.3'
   id 'jacoco'
   id 'maven-publish'
   id "com.github.ben-manes.versions" version "0.64.0"
