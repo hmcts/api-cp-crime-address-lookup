@@ -1,11 +1,11 @@
 plugins {
   id 'java'
-  id 'org.openapi.generator' version '7.25.0'
-  id 'com.diffplug.spotless' version '8.10.3'
+  id 'org.openapi.generator' version '7.26.0'
+  id 'com.diffplug.spotless' version '8.10.4'
   id 'jacoco'
   id 'maven-publish'
-  id "com.github.ben-manes.versions" version "0.64.0"
-  id "org.cyclonedx.bom" version "3.5.0"
+  id "com.github.ben-manes.versions" version "0.65.0"
+  id "org.cyclonedx.bom" version "3.5.1"
   id 'pmd'
 }
 
