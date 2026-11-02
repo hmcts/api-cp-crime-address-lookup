@@ -33,8 +33,8 @@ dependencies {
   // generation itself; only the runtime pieces the generated interfaces/models need at
   // compile/runtime, plus what OpenAPIConfigurationLoader needs to parse the spec, go here.
   implementation "io.swagger.parser.v3:swagger-parser:2.1.48"
-  implementation "io.swagger.core.v3:swagger-models:2.2.55"
-  compileOnly "io.swagger.core.v3:swagger-annotations:2.2.55"
+  implementation "io.swagger.core.v3:swagger-models:3.0.0"
+  compileOnly "io.swagger.core.v3:swagger-annotations:3.0.0"
   implementation "net.logstash.logback:logstash-logback-encoder:9.0"
 
   implementation "com.fasterxml.jackson.core:jackson-annotations:2.22"
